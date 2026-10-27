@@ -1,0 +1,117 @@
+import os
+import streamlit as st
+from dotenv import load_dotenv
+from google import genai
+
+load_dotenv()
+api_key = os.getenv("GEMINI_API_KEY")
+
+st.set_page_config(
+    page_title="Academic Writing Enhancement Tool",
+    page_icon="📘",
+    layout="wide"
+)
+
+st.markdown("""
+<style>
+.stApp {
+    background-color: #0e1117;
+    color: white;
+}
+h1, h2, h3, p, label {
+    color: white !important;
+}
+textarea {
+    background-color: #262832 !important;
+    color: white !important;
+}
+.stButton > button {
+    background-color: #ff4b4b;
+    color: white;
+    border-radius: 8px;
+    border: none;
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.title("📘 Academic Writing Enhancement Tool")
+st.write(
+    "Improve grammar, clarity, sentence structure "
+    "and academic tone using Gemini AI."
+)
+
+if not api_key:
+    st.error("Please configure your Gemini API key in .env")
+    st.stop()
+
+client = genai.Client(api_key=api_key)
+
+style = st.selectbox(
+    "Choose Enhancement Style",
+    [
+        "Full academic refinement",
+        "Grammar correction",
+        "Improve clarity",
+        "Formal academic tone"
+    ]
+)
+
+text = st.text_area(
+    "Enter your academic text:",
+    height=180,
+    placeholder="Paste your academic paragraph here..."
+)
+
+if st.button("Enhance Writing"):
+    if text.strip():
+        prompt = f"""
+        Improve the following academic text.
+        Selected style: {style}
+        Correct grammar and sentence structure.
+        Improve clarity, coherence and formal tone.
+        Preserve the original meaning.
+
+        Text:
+        {text}
+        """
+
+        try:
+            with st.spinner("Improving text..."):
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=prompt
+                )
+
+            improved_text = response.text or "No output generated."
+
+            st.subheader("Original Text")
+            st.caption("Before improvement")
+            st.text_area(
+                "Original",
+                value=text,
+                height=150,
+                disabled=True,
+                label_visibility="collapsed"
+            )
+
+            st.subheader("Enhanced Academic Text")
+            st.caption("After improvement")
+            st.text_area(
+                "Enhanced",
+                value=improved_text,
+                height=180,
+                label_visibility="collapsed"
+            )
+
+            st.download_button(
+                "Download Enhanced Text",
+                data=improved_text,
+                file_name="enhanced_text.txt",
+                mime="text/plain"
+            )
+
+        except Exception as e:
+            st.error("Unable to process text.")
+            st.write(str(e))
+    else:
+        st.warning("Please enter some text.")
